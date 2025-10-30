@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# This file allows you to deploy all resources with a single command:
+# oc apply -k openshift/
+
+resources:
+  # Cluster-level resources (require admin privileges)
+  # Uncomment if you need to create the storage class and satellite config
+  # - storageclass.yaml
+  # - satellite-config.yaml
+
+  # Project-level resources
+  - imagestream.yaml
+  - buildconfig.yaml
+  - pvc.yaml
+  - writer-deployment.yaml
+  - reader-deployment.yaml
+
+# Optional: Add common labels to all resources
+commonLabels:
+  project: shared-storage-demo
+  managed-by: kustomize
+
+# Namespace for all resources
+namespace: storage-test

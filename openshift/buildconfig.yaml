@@ -1,0 +1,24 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: storage-demo
+  labels:
+    app: storage-demo
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: storage-demo:latest
+  source:
+    type: Git
+    git:
+      uri: https://github.com/jaypoulz/shared-writer-test.git  # Replace with your Git repository
+      ref: main  # or master, depending on your default branch
+    contextDir: /  # Root of the repository
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange

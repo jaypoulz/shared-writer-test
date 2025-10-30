@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storage-demo-rwo
+  labels:
+    app: storage-demo
+    mode: rwo
+spec:
+  replicas: 1  # Single pod with both writer and reader containers
+  selector:
+    matchLabels:
+      app: storage-demo
+      mode: rwo
+  template:
+    metadata:
+      labels:
+        app: storage-demo
+        mode: rwo
+        role: writer  # Keep writer label for test script compatibility
+    spec:
+      serviceAccountName: storage-demo-sa
+      securityContext:
+        fsGroup: 0  # Use root group for mounted volumes
+        runAsNonRoot: false
+      containers:
+      # Writer container
+      - name: writer
+        image: image-registry.openshift-image-registry.svc:5000/storage-test/storage-demo:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          allowPrivilegeEscalation: true
+        env:
+        - name: ROLE
+          value: "writer"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /mnt/shared
+          mountPropagation: HostToContainer
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
+      # Reader container (shares the same volume mount)
+      - name: reader
+        image: image-registry.openshift-image-registry.svc:5000/storage-test/storage-demo:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          allowPrivilegeEscalation: true
+        env:
+        - name: ROLE
+          value: "reader"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /mnt/shared
+          readOnly: true  # Reader accesses as read-only
+          mountPropagation: HostToContainer
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+
+      volumes:
+      - name: shared-storage
+        persistentVolumeClaim:
+          claimName: linstor-shared-storage-rwo

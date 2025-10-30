@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pv-provisioning-demo
+  labels:
+    demo: nfs-pv-provisioning
+    mode: rwx-nfs
+spec:
+  accessModes: [ ReadWriteOnce ]
+  resources:
+    requests:
+      storage: 5Gi
+  # LINSTOR storageClass provides backing storage for NFS server
+  storageClassName: linstor-basic-storage-class
+

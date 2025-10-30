@@ -1,0 +1,16 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: linstor-basic-storage-class
+provisioner: linstor.csi.linbit.com
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+parameters:
+  # LINSTOR will provision volumes from the vg1-thin storage pool configured
+  # on the satellite nodes in the LINSTOR cluster
+  autoPlace: "2"
+  storagePool: "vg1-thin"
+  resourceGroup: "linstor-basic-storage-class"
+  # Setting a fstype is required for "fsGroup" permissions to work correctly.
+  # Currently supported: xfs/ext4
+  csi.storage.k8s.io/fstype: xfs

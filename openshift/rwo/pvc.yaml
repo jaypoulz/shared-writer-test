@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linstor-shared-storage-rwo
+  labels:
+    app: storage-demo
+spec:
+  accessModes:
+    - ReadWriteOnce  # RWO - One mount point (shared by containers in same pod)
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: linstor-basic-storage-class

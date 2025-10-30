@@ -1,0 +1,6 @@
+openshift/
+README.md
+.git/
+.gitignore
+*.md
+

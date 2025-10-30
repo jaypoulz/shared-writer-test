@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: linstor-shared-storage
+  labels:
+    app: storage-demo
+spec:
+  accessModes:
+    - ReadWriteOnce  # RWO - One pod can mount for read/write, others can read from replicated storage
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: linstor-basic-storage-class  # Adjust this to match your LINSTOR storage class name
+  # Common LINSTOR storage class names:
+  # - linstor-basic-storage-class
+  # - linstor-storage
+  # - linstor-thin-r1
+  # - linstor-thin-r2
+  # - linstor-sds-storage
+  # Check with: oc get storageclasses

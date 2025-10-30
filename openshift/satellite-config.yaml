@@ -1,0 +1,12 @@
+apiVersion: piraeus.io/v1
+kind: LinstorSatelliteConfiguration
+metadata:
+  name: storage-satellites
+spec:
+  storagePools:
+   - name: vg1-thin
+     lvmThinPool:
+       volumeGroup: vg1
+     source:
+       hostDevices:
+         - /dev/vda
