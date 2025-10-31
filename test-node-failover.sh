@@ -249,7 +249,7 @@ case "$FAILURE_MODE" in
         echo ""
 
         echo "🗑️  Undefining domain to prevent auto-restart..."
-        virsh -c qemu:///system undefine $VM_NAME
+        virsh -c qemu:///system undefine --nvram $VM_NAME
         echo ""
 
         echo "💥 Destroying VM (hard power-off)..."
