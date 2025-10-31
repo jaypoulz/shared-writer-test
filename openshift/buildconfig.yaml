@@ -12,9 +12,9 @@ spec:
   source:
     type: Git
     git:
-      uri: https://github.com/jaypoulz/shared-writer-test.git  # Replace with your Git repository
-      ref: main  # or master, depending on your default branch
-    contextDir: /  # Root of the repository
+      uri: https://github.com/jaypoulz/two-node-storage-demo.git
+      ref: main
+    contextDir: /
   strategy:
     type: Docker
     dockerStrategy:
