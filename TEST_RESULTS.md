@@ -62,8 +62,8 @@ Output: mount: /var/lib/kubelet/pods/44ea0d50-38d1-4d97-8c29-ee78dedd1061/volume
 **Root Cause**:
 When the node is gracefully shutdown without draining first, the old pod doesn't terminate cleanly. LINSTOR/DRBD doesn't release the volume mount from the old node, leaving it in a write-protected state. The new pod cannot acquire read-write access.
 
-**Additional Impact**:
-The shutdown test left the storage pool on the shutdown node in an error state, preventing any further provisioning:
+**Post-Test Impact**:
+After running this test, the storage pool on the shutdown node remains in an error state, preventing any further PVC provisioning:
 
 ```
 $ kubectl-linstor storage-pool list
@@ -88,7 +88,7 @@ The storage pool requires manual intervention or node restart to recover.
 
 ### Test 3: Destroy Mode (Hard Power-Off)
 
-**Status**: ⏳ NOT TESTED
+**Status**: ❌ FAIL
 
 **Description**: Hard VM power-off simulating catastrophic hardware failure.
 
@@ -100,10 +100,35 @@ The storage pool requires manual intervention or node restart to recover.
 - Pod reschedules on surviving node
 - Volume mounts successfully on new node
 
-**Result**:
+**Actual Behavior**:
+Pod migration succeeds and storage remounts on surviving node during the test.
+
+**Post-Test Impact**:
+After running this test, same issue as Test 2 (Graceful Shutdown) - the storage pool on the destroyed node remains in an error state and prevents new PVC provisioning:
+
 ```
-Not yet tested
+$ kubectl-linstor storage-pool list
+╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+┊ StoragePool          ┊ Node     ┊ Driver   ┊ PoolName     ┊ FreeCapacity ┊ TotalCapacity ┊ State ┊
+╞═════════════════════════════════════════════════════════════════════════════════════════════════╡
+┊ vg1-thin             ┊ master-0 ┊ LVM_THIN ┊ vg1/vg1-thin ┊        0 KiB ┊         0 KiB ┊ Error ┊
+┊ vg1-thin             ┊ master-1 ┊ LVM_THIN ┊ vg1/vg1-thin ┊    59.88 GiB ┊     59.88 GiB ┊ Ok    ┊
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ERROR:
+Description:
+    Node: 'master-0', storage pool: 'vg1-thin' - Failed to query free space from storage pool
 ```
+
+This prevents new PVC provisioning due to insufficient available nodes for `autoPlace: 2`.
+
+**Notes**:
+- Similar to Test 2, the storage pool requires manual intervention after node recovery
+- A timing issue (observed in Test 2) may also affect this scenario where LINSTOR doesn't fully detect and recover from the node failure
+
+**Workaround**:
+- Restore the VM and wait for node to rejoin cluster
+- Allow time for LINSTOR to detect node recovery and resync storage pools
 
 ---
 
@@ -128,38 +153,3 @@ Not yet tested
 ```
 Not yet tested
 ```
-
----
-
-## Test Configuration
-
-### StorageClass
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: linstor-basic-storage-class
-provisioner: linstor.csi.linbit.com
-parameters:
-  autoPlace: "2"
-  storagePool: "lvm-thin"
-  resourceGroup: "default"
-  fsType: xfs
-```
-
-### Security Context
-```yaml
-# Pod-level
-securityContext:
-  fsGroup: 0
-  runAsNonRoot: false
-
-# Container-level
-securityContext:
-  privileged: true
-  runAsUser: 0
-  allowPrivilegeEscalation: true
-```
-
-### SCC
-- Using `privileged` SCC via RoleBinding
