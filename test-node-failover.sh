@@ -372,13 +372,20 @@ if [ -n "$NEW_POD" ]; then
     echo "-------------------------------------------"
     echo ""
 
+    # Determine test result
     if [ "$success" = true ]; then
-        echo "✅ Storage is accessible and being written to by failover node"
+        TEST_RESULT="PASS"
+        TEST_STATUS="✅"
+        TEST_MESSAGE="Storage is accessible and being written to by failover node"
     else
-        echo "⚠️  No new entries detected yet (may need more time)"
+        TEST_RESULT="FAIL"
+        TEST_STATUS="❌"
+        TEST_MESSAGE="No new entries detected - failover may have failed"
     fi
 else
-    echo "⚠️  Could not find new pod for storage verification"
+    TEST_RESULT="FAIL"
+    TEST_STATUS="❌"
+    TEST_MESSAGE="Could not find new pod for storage verification"
 fi
 echo ""
 
@@ -443,7 +450,46 @@ esac
 echo ""
 
 echo "=========================================="
-echo "✅ Node Failover Test Complete!"
+echo "TEST RESULTS"
+echo "=========================================="
+echo ""
+echo "Failure Mode: $FAILURE_MODE"
+echo "Origin Node:  $NODE"
+echo "Failover Node: $NEW_NODE"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  TEST STATUS: $TEST_STATUS $TEST_RESULT"
+echo ""
+echo "  $TEST_MESSAGE"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if [ "$TEST_RESULT" == "FAIL" ]; then
+    echo "⚠️  TEST FAILED - Recommended Actions:"
+    echo ""
+    echo "1. Check pod events for detailed error messages:"
+    echo "   oc describe pod -l mode=rwo"
+    echo ""
+    echo "2. Check PVC status:"
+    echo "   oc describe pvc linstor-shared-storage-rwo"
+    echo ""
+    echo "3. Check LINSTOR resources:"
+    echo "   oc get linstorresources -A"
+    echo ""
+    echo "4. Review TEST_RESULTS.md and document this failure"
+    echo ""
+    echo "5. Consider using a different failure mode:"
+    if [ "$FAILURE_MODE" == "shutdown" ]; then
+        echo "   - Try 'cordon' mode for planned maintenance scenarios"
+        echo "   - Try 'destroy' mode for catastrophic failure testing"
+    fi
+    echo ""
+fi
+
+echo "=========================================="
+echo "Test Complete"
 echo "=========================================="
 echo ""
 
@@ -463,4 +509,13 @@ echo "    oc get nodes | grep SchedulingDisabled"
 echo ""
 echo "  Uncordon the node:"
 echo "    oc adm uncordon $NODE"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📋 Please document your test results in TEST_RESULTS.md"
+echo ""
+echo "   Test: RWO Mode - $FAILURE_MODE"
+echo "   Status: $TEST_STATUS $TEST_RESULT"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""

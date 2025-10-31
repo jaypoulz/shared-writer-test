@@ -243,6 +243,8 @@ main() {
     echo "✅ Test Complete!"
     echo "=========================================="
     echo ""
+    echo "📋 Don't forget to document your results in TEST_RESULTS.md"
+    echo ""
 }
 
 # Show help

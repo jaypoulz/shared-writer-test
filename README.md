@@ -4,6 +4,8 @@
 
 Test LINSTOR storage on OpenShift with two modes: node failover (RWO) and multi-writer (RWX).
 
+📋 **[View Test Results & Known Issues →](TEST_RESULTS.md)**
+
 ## Two Test Modes
 
 ### RWO Mode: Node Failover Testing
@@ -39,7 +41,7 @@ This script will:
 **RWO Test** - Interactive failover with 3 modes:
 - Cordon/Drain - Kubernetes graceful drain
 - Shutdown - Graceful VM shutdown (`virsh shutdown`)
-- Destroy - Hard power-off (`virsh destroy`)
+- Destroy - Hard VM power-off (`virsh destroy`)
 
 **RWX Test** - Verifies concurrent writes from multiple pods
 
