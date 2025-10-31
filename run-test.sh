@@ -50,7 +50,7 @@ select_test_mode() {
     echo "     └─ Single pod, tests node failure scenarios"
     echo "     └─ Options: cordon/drain, VM shutdown, VM destroy"
     echo ""
-    echo "  2) RWX Mode - Multi-Writer Testing"
+    echo "  2) RWX Mode - Multi-Writer Testing ⚠️  UNTESTED PROTOTYPE"
     echo "     └─ Two pods on different nodes, concurrent writes via NFS"
     echo ""
     read -p "Enter your choice [1-2]: " choice
@@ -71,6 +71,31 @@ select_test_mode() {
     echo ""
     echo "🎯 Selected: ${TEST_MODE^^} Mode"
     echo ""
+
+    # Warning for RWX mode
+    if [ "$TEST_MODE" == "rwx" ]; then
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "⚠️  WARNING: UNTESTED PROTOTYPE"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "RWX mode has NOT been validated and may have:"
+        echo "  - Unknown issues or failures"
+        echo "  - Data corruption risks"
+        echo "  - Performance problems"
+        echo ""
+        echo "This configuration is provided as-is for"
+        echo "experimental/testing purposes only."
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        read -p "Continue with UNTESTED RWX mode? (y/N): " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Cancelled."
+            exit 0
+        fi
+        echo ""
+    fi
 }
 
 # Run RWO test workflow

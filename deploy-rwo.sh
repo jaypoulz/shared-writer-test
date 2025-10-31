@@ -82,26 +82,6 @@ echo "💾 Creating PersistentVolumeClaim..."
 oc apply -f openshift/rwo/pvc.yaml
 echo ""
 
-# Wait for PVC to be bound
-echo "⏳ Waiting for PVC to be bound..."
-timeout=60
-elapsed=0
-while [ $elapsed -lt $timeout ]; do
-    status=$(oc get pvc linstor-shared-storage-rwo -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
-    if [ "$status" = "Bound" ]; then
-        echo "   ✅ PVC is bound!"
-        break
-    fi
-    echo "   PVC status: $status (waiting...)"
-    sleep 5
-    elapsed=$((elapsed + 5))
-done
-
-if [ "$status" != "Bound" ]; then
-    echo "   ⚠️  Warning: PVC is not bound yet. Continuing anyway..."
-fi
-echo ""
-
 # Pre-pull image to all nodes
 echo "📥 Pre-pulling image to all nodes for failover support..."
 echo ""

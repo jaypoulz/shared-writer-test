@@ -232,13 +232,30 @@ case "$FAILURE_MODE" in
         echo "⚡ HARD POWER-OFF VM: $VM_NAME"
         echo "   ⚠️  This simulates pulling the power cable!"
         echo ""
+
+        echo "💾 Backing up domain XML..."
+        VM_XML_BACKUP="/tmp/${VM_NAME}-backup.xml"
+        virsh -c qemu:///system dumpxml $VM_NAME > $VM_XML_BACKUP
+        if [ -f "$VM_XML_BACKUP" ]; then
+            echo "   ✅ Domain XML backed up to: $VM_XML_BACKUP"
+        else
+            echo "   ⚠️  Failed to backup domain XML"
+            exit 1
+        fi
+        echo ""
+
         echo "🔒 Disabling autostart to prevent automatic recovery..."
         virsh -c qemu:///system autostart --disable $VM_NAME
         echo ""
+
+        echo "🗑️  Undefining domain to prevent auto-restart..."
+        virsh -c qemu:///system undefine $VM_NAME
+        echo ""
+
         echo "💥 Destroying VM (hard power-off)..."
         virsh -c qemu:///system destroy $VM_NAME
         echo ""
-        echo "✅ VM destroyed (hard power-off)"
+        echo "✅ VM destroyed and undefined (hard power-off)"
         echo "   Node should become NotReady shortly..."
         sleep 5
         ;;
@@ -409,7 +426,7 @@ case "$FAILURE_MODE" in
         fi
         ;;
 
-    shutdown|destroy)
+    shutdown)
         echo "VM '$VM_NAME' is powered off."
         echo ""
         read -p "Do you want to start the VM now? (y/N): " -n 1 -r
@@ -418,19 +435,58 @@ case "$FAILURE_MODE" in
             echo "   Starting VM $VM_NAME..."
             virsh -c qemu:///system start $VM_NAME
             echo "   ✅ VM start command sent"
+            echo ""
+            echo "   Note: Node will take a few minutes to rejoin the cluster"
+            echo ""
+            echo "   Monitor node status with:"
+            echo "     watch oc get nodes"
+        else
+            echo "   ℹ️  VM remains powered off"
+            echo "   To start later: virsh -c qemu:///system start $VM_NAME"
+        fi
+        ;;
 
-            # For destroy mode, offer to re-enable autostart
-            if [ "$FAILURE_MODE" == "destroy" ]; then
+    destroy)
+        echo "VM '$VM_NAME' is powered off and undefined."
+        echo ""
+        read -p "Do you want to restore and start the VM now? (y/N): " -n 1 -r
+        echo ""
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            # Restore VM definition from backup
+            if [ -f "$VM_XML_BACKUP" ]; then
+                echo "   Restoring VM definition from backup..."
+                virsh -c qemu:///system define $VM_XML_BACKUP
+                echo "   ✅ VM defined from backup"
                 echo ""
-                read -p "   Do you want to re-enable autostart for this VM? (y/N): " -n 1 -r
-                echo ""
-                if [[ $REPLY =~ ^[Yy]$ ]]; then
-                    virsh -c qemu:///system autostart $VM_NAME
-                    echo "   ✅ Autostart re-enabled"
-                else
-                    echo "   ℹ️  Autostart remains disabled"
-                    echo "   To enable later: virsh -c qemu:///system autostart $VM_NAME"
-                fi
+            else
+                echo "   ❌ Error: Backup XML not found at $VM_XML_BACKUP"
+                echo "   Cannot restore VM without domain XML"
+                exit 1
+            fi
+
+            echo "   Starting VM $VM_NAME..."
+            virsh -c qemu:///system start $VM_NAME
+            echo "   ✅ VM start command sent"
+            echo ""
+
+            read -p "   Do you want to re-enable autostart for this VM? (y/N): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                virsh -c qemu:///system autostart $VM_NAME
+                echo "   ✅ Autostart re-enabled"
+            else
+                echo "   ℹ️  Autostart remains disabled"
+                echo "   To enable later: virsh -c qemu:///system autostart $VM_NAME"
+            fi
+
+            echo ""
+            read -p "   Delete backup XML file? (y/N): " -n 1 -r
+            echo ""
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                rm -f "$VM_XML_BACKUP"
+                echo "   ✅ Backup XML deleted"
+            else
+                echo "   ℹ️  Backup XML kept at: $VM_XML_BACKUP"
             fi
 
             echo ""
@@ -439,11 +495,12 @@ case "$FAILURE_MODE" in
             echo "   Monitor node status with:"
             echo "     watch oc get nodes"
         else
-            echo "   ℹ️  VM remains powered off"
-            if [ "$FAILURE_MODE" == "destroy" ]; then
-                echo "   Note: Autostart is disabled for this VM"
-            fi
-            echo "   To start later: virsh -c qemu:///system start $VM_NAME"
+            echo "   ℹ️  VM remains powered off and undefined"
+            echo "   Note: Domain XML backup saved at: $VM_XML_BACKUP"
+            echo ""
+            echo "   To restore later:"
+            echo "     virsh -c qemu:///system define $VM_XML_BACKUP"
+            echo "     virsh -c qemu:///system start $VM_NAME"
         fi
         ;;
 esac

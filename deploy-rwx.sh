@@ -86,25 +86,6 @@ echo "   Creating PVC for NFS server (backed by LINSTOR)..."
 oc apply -f openshift/rwx/nfs-pvc.yaml
 echo ""
 
-echo "   Waiting for NFS PVC to be bound..."
-timeout=60
-elapsed=0
-while [ $elapsed -lt $timeout ]; do
-    status=$(oc get pvc nfs-pv-provisioning-demo -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
-    if [ "$status" = "Bound" ]; then
-        echo "   ✅ NFS PVC is bound!"
-        break
-    fi
-    echo "   PVC status: $status (waiting...)"
-    sleep 5
-    elapsed=$((elapsed + 5))
-done
-
-if [ "$status" != "Bound" ]; then
-    echo "   ⚠️  Warning: NFS PVC is not bound yet. Continuing anyway..."
-fi
-echo ""
-
 echo "   Creating NFS server pod..."
 oc apply -f openshift/rwx/nfs-server.yaml
 echo ""
@@ -142,21 +123,6 @@ echo ""
 
 echo "   Creating NFS PersistentVolumeClaim..."
 oc apply -f openshift/rwx/nfs-pvc-client.yaml
-echo ""
-
-echo "   Waiting for NFS client PVC to be bound..."
-timeout=30
-elapsed=0
-while [ $elapsed -lt $timeout ]; do
-    status=$(oc get pvc nfs -o jsonpath='{.status.phase}' 2>/dev/null || echo "Pending")
-    if [ "$status" = "Bound" ]; then
-        echo "   ✅ NFS client PVC is bound!"
-        break
-    fi
-    echo "   PVC status: $status (waiting...)"
-    sleep 3
-    elapsed=$((elapsed + 3))
-done
 echo ""
 
 # Pre-pull image to all nodes

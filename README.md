@@ -18,6 +18,8 @@ Test LINSTOR storage on OpenShift with two modes: node failover (RWO) and multi-
 - NFS on LINSTOR for ReadWriteMany
 - Test concurrent writes from multiple nodes
 
+> ⚠️ **WARNING**: RWX mode is an UNTESTED PROTOTYPE. Use at your own risk. This configuration has not been validated and may have unknown issues.
+
 ## Quick Start
 
 ### Prerequisites
@@ -43,7 +45,7 @@ This script will:
 - Shutdown - Graceful VM shutdown (`virsh shutdown`)
 - Destroy - Hard VM power-off (`virsh destroy`)
 
-**RWX Test** - Verifies concurrent writes from multiple pods
+**RWX Test** - ⚠️ UNTESTED PROTOTYPE - Verifies concurrent writes from multiple pods
 
 ### Manual Mode (Advanced)
 
@@ -56,6 +58,9 @@ This script will:
 ```
 
 **RWX Mode:**
+
+> ⚠️ **WARNING**: RWX mode is an UNTESTED PROTOTYPE. Not recommended for use.
+
 ```bash
 ./deploy-rwx.sh   # Deploy
 ./check-rwx.sh    # Check status

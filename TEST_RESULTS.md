@@ -62,6 +62,25 @@ Output: mount: /var/lib/kubelet/pods/44ea0d50-38d1-4d97-8c29-ee78dedd1061/volume
 **Root Cause**:
 When the node is gracefully shutdown without draining first, the old pod doesn't terminate cleanly. LINSTOR/DRBD doesn't release the volume mount from the old node, leaving it in a write-protected state. The new pod cannot acquire read-write access.
 
+**Additional Impact**:
+The shutdown test left the storage pool on the shutdown node in an error state, preventing any further provisioning:
+
+```
+$ kubectl-linstor storage-pool list
+╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+┊ StoragePool          ┊ Node     ┊ Driver   ┊ PoolName     ┊ FreeCapacity ┊ TotalCapacity ┊ State ┊
+╞═════════════════════════════════════════════════════════════════════════════════════════════════╡
+┊ vg1-thin             ┊ master-0 ┊ LVM_THIN ┊ vg1/vg1-thin ┊        0 KiB ┊         0 KiB ┊ Error ┊
+┊ vg1-thin             ┊ master-1 ┊ LVM_THIN ┊ vg1/vg1-thin ┊    59.88 GiB ┊     59.88 GiB ┊ Ok    ┊
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+ERROR:
+Description:
+    Node: 'master-0', storage pool: 'vg1-thin' - Failed to query free space from storage pool
+```
+
+The storage pool requires manual intervention or node restart to recover.
+
 **Workaround**:
 - Use "Cordon/Drain" mode instead, which properly migrates workloads before shutdown
 
@@ -89,6 +108,8 @@ Not yet tested
 ---
 
 ## RWX Mode: Multi-Writer Tests
+
+> ⚠️ **WARNING**: RWX mode is an UNTESTED PROTOTYPE. This configuration has not been validated.
 
 ### Test 4: Concurrent Writes
 
