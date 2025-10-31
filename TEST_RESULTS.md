@@ -46,7 +46,7 @@ and writes continue without interruption.
 - Pod reschedules and mounts volume on new node
 
 **Actual Behavior**:
-Volume fails to mount on new node with the following error:
+Volume fails to mount on new node. This error occurred on the first test run but did not reproduce on a second attempt, suggesting a race condition:
 
 ```
 Events:
@@ -60,18 +60,35 @@ Output: mount: /var/lib/kubelet/pods/44ea0d50-38d1-4d97-8c29-ee78dedd1061/volume
 ```
 
 **Root Cause**:
-When the node is gracefully shutdown without draining first, the old pod doesn't terminate cleanly. LINSTOR/DRBD doesn't release the volume mount from the old node, leaving it in a write-protected state. The new pod cannot acquire read-write access.
+When the node is gracefully shutdown without draining first, the old pod doesn't terminate cleanly. LINSTOR/DRBD doesn't release the volume mount from the old node quickly enough, causing a timing issue where the new pod attempts to mount before the old mount is fully released. This results in a write-protected state preventing read-write access. The race condition nature (failed first test, passed second test) suggests the success depends on timing between node shutdown, volume release, and pod rescheduling.
+
+**What Happens**:
+When the node shuts down, LINSTOR initially detects the connection loss and puts the storage pool in a Warning state:
+
+```
+WARNING:
+Description:
+    No active connection to satellite 'master-0'
+
+$ kubectl-linstor storage-pool list
+╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
+┊ StoragePool  ┊ Node     ┊ Driver   ┊ PoolName     ┊ FreeCapacity ┊ TotalCapacity ┊ State   ┊
+╞═════════════════════════════════════════════════════════════════════════════════════════════════╡
+┊ vg1-thin     ┊ master-0 ┊ LVM_THIN ┊ vg1/vg1-thin ┊              ┊               ┊ Warning ┊
+┊ vg1-thin     ┊ master-1 ┊ LVM_THIN ┊ vg1/vg1-thin ┊    59.88 GiB ┊     59.88 GiB ┊ Ok      ┊
+╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
 
 **Post-Test Impact**:
-After running this test, the storage pool on the shutdown node remains in an error state, preventing any further PVC provisioning:
+After the node is restarted, the storage pool transitions to an Error state instead of recovering, preventing any further PVC provisioning:
 
 ```
 $ kubectl-linstor storage-pool list
 ╭─────────────────────────────────────────────────────────────────────────────────────────────────╮
-┊ StoragePool          ┊ Node     ┊ Driver   ┊ PoolName     ┊ FreeCapacity ┊ TotalCapacity ┊ State ┊
+┊ StoragePool  ┊ Node     ┊ Driver   ┊ PoolName     ┊ FreeCapacity ┊ TotalCapacity ┊ State ┊
 ╞═════════════════════════════════════════════════════════════════════════════════════════════════╡
-┊ vg1-thin             ┊ master-0 ┊ LVM_THIN ┊ vg1/vg1-thin ┊        0 KiB ┊         0 KiB ┊ Error ┊
-┊ vg1-thin             ┊ master-1 ┊ LVM_THIN ┊ vg1/vg1-thin ┊    59.88 GiB ┊     59.88 GiB ┊ Ok    ┊
+┊ vg1-thin     ┊ master-0 ┊ LVM_THIN ┊ vg1/vg1-thin ┊        0 KiB ┊         0 KiB ┊ Error ┊
+┊ vg1-thin     ┊ master-1 ┊ LVM_THIN ┊ vg1/vg1-thin ┊    59.88 GiB ┊     59.88 GiB ┊ Ok    ┊
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ERROR:
